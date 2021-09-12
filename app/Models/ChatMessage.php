@@ -9,6 +9,8 @@ class ChatMessage extends Model
 {
     use HasFactory;
 
+    protected $fillable = ['user_id', 'chat_room_id', 'message'];
+
     public function room(){
         return $this->hasOne('App\Models\ChatRoom', 'id', 'chat_room_id');
     }
