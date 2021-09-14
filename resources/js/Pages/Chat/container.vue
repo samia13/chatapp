@@ -2,7 +2,12 @@
     <app-layout title="Dashboard">
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                Chat
+                <chat-room-toggle
+                    v-if="currentRoom.id"
+                    :rooms="chatRooms"
+                    :currentRoom="currentRoom"
+                    v-on:roomchanged="setCurrentRoom($event)"
+                />
             </h2>
         </template>
 
@@ -25,6 +30,7 @@ import { defineComponent } from "vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import MessageContainer from "./messageContainer.vue";
 import InputMessage from "./inputMessage.vue";
+import ChatRoomToggle from "./chatRoomToggle.vue";
 import axios from "axios";
 
 export default {
@@ -32,6 +38,7 @@ export default {
         AppLayout,
         MessageContainer,
         InputMessage,
+        ChatRoomToggle,
     },
     data: function () {
         return {
@@ -40,7 +47,31 @@ export default {
             messages: [],
         };
     },
+    watch: {
+        currentRoom(val, oldVal) {
+            if (oldVal.id) {
+                // if the user was subscribed to a channel
+                this.disconnect(oldVal); // disconnect it from that channel
+            }
+            this.connect();
+        },
+    },
     methods: {
+        connect() {
+            if (this.currentRoom.id) {
+                let vm = this;
+                this.getMessages();
+                window.Echo.private("chat." + this.currentRoom.id).listen(
+                    ".message.new",
+                    (e) => {
+                        vm.getMessages();
+                    }
+                );
+            }
+        },
+        disconnect(room) {
+            window.Echo.leave("chat." + room.id);
+        },
         getRooms() {
             axios
                 .get("/chat/rooms")
@@ -54,7 +85,6 @@ export default {
         },
         setCurrentRoom(room) {
             this.currentRoom = room;
-            this.getMessages();
         },
         getMessages() {
             axios
